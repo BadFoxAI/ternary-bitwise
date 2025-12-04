@@ -1,4 +1,4 @@
-Title: Ternary Bitwise Constraint Engine (TBCE) — Formal Specification
+Ternary Bitwise Constraint Engine (TBCE) — Formal Specification
 
 1. Overview
 The TBCE system defines a universal, hardware-agnostic constraint-solving architecture constructed entirely from binary bitwise operations and shifts. Logical state is represented in balanced ternary (−1, 0, +1) encoded using binary masks. All arithmetic, control flow, memory/state transitions, and constraint propagation reduce to pure bitwise transformations, enabling maximal performance on any hardware supporting AND, OR, XOR, NOT, SHL, SHR.
