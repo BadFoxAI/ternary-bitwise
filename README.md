@@ -1,82 +1,145 @@
-This document describes a theoretical system called the "Atomic Voxel" or "Hypercube Gematria Model." Its purpose is to create a unified map that connects the 22 letters of the Hebrew alphabet to a specific geometric and mathematical structure.
+Title: Ternary Bitwise Constraint Engine (TBCE) — Formal Specification
 
-The core idea is to represent each letter as a unique point within a 12-dimensional space (a "hypercube"). The position and relationships between these points are not random; they are defined by a set of rules based on binary numbers. This allows any logical system or concept represented by these letters to be analyzed geometrically.
+1. Overview
+The TBCE system defines a universal, hardware-agnostic constraint-solving architecture constructed entirely from binary bitwise operations and shifts. Logical state is represented in balanced ternary (−1, 0, +1) encoded using binary masks. All arithmetic, control flow, memory/state transitions, and constraint propagation reduce to pure bitwise transformations, enabling maximal performance on any hardware supporting AND, OR, XOR, NOT, SHL, SHR.
 
-* This is an non-authoritative exploratory and living document, many different options and base settings can be applied, all mearly symbolic abstractions of the pure math at its base. In short please excuse any discrepincies in aligning the symbols correctly to their meanings and operations. All genuine feedback and interest is most welcome and encouraged.
+2. Trit Encoding
+Each trit T ∈ {−1, 0, +1} is represented using two binary masks:
+NEG  (bit = 1 iff T = −1)
+ZERO (bit = 1 iff T = 0)
+POS  (bit = 1 iff T = +1)
 
----
+Invariants (for each position):
+NEG | ZERO | POS = 1
+NEG & ZERO = ZERO & POS = POS & NEG = 0
 
-### **Section 1: The Core Principles (Axioms)**
+A 12-trit word W is defined as:
+W = {NEG[0..11], ZERO[0..11], POS[0..11]}
 
-#### **The 12-Dimensional Universe**
+3. Ternary Arithmetic (Bitwise Definitions)
 
-The entire system exists within a 12-bit binary space.
+3.1 Negation
+NEG'  = POS
+ZERO' = ZERO
+POS'  = NEG
 
-*   **Math Explained:** Imagine you have 12 light switches. Each switch can be either ON (represented by a 1) or OFF (represented by a 0). The total number of unique ON/OFF combinations you can make is 2 x 2 x 2... (12 times), which is 2¹² or 4096. This model gives each unique combination a number, from 0 (all switches OFF) to 4095 (all switches ON). This collection of 4096 possible states is the "Universe" of the model.
+3.2 Addition
+For each trit position i:
+Let (Ni,Zi,Pi) and (Mi,Wi,Qi) be operands.
 
-#### **Symmetry and Complements**
+Compute raw combination masks:
+Sneg  = (Ni & Wi) | (Ni & Qi) | (Zi & Ni)
+Szero = (Zi & Wi) | (Ni & Qi) | (Pi & Mi)
+Spos  = (Pi & Qi) | (Pi & Wi) | (Zi & Pi)
 
-Every state in the system has a perfect opposite, called its complement.
+Carrier computation (ternary carry propagation):
+CarryNeg  = (Pi & Qi)
+CarryPos  = (Ni & Mi)
+CarryZero = ~(CarryNeg | CarryPos)
 
-*   **Formula:** `~V = V XOR 4095`
-*   **Math Explained:** The complement of a state is found by flipping all its bits. If a bit is 1, it becomes 0, and if it's 0, it becomes 1. The formula uses a bitwise operation called "XOR" (Exclusive OR). When you XOR any number with 4095 (which is `111111111111` in binary), it has the effect of flipping every single bit, thus finding its exact opposite or complement.
-*   **Formula:** `V + ~V = 4095`
-*   **Math Explained:** If you take any number in the system and add its bitwise complement, the result will always be 4095 (all bits set to 1). This reinforces the idea of perfect symmetry.
+Shift carry masks to the next higher trit via SHL.
 
----
+Sum with carry is computed by recursively applying (3.2) at each trit index.
 
-### **Section 2: How Letters Are Represented**
+3.3 Comparison
+Equality (per trit):
+EQ = (NEG1 & NEG2) | (ZERO1 & ZERO2) | (POS1 & POS2)
+A 12-trit word comparison:
+EQword = AND over all EQ bits
 
-Each Hebrew letter is defined by two key things: its traditional Gematria value and, more importantly for this model, a 12-bit number called its "Structural Vector." This vector determines the letter's exact location in the 12-dimensional hypercube.
+Sign determination (three-valued):
+IS_NEG  = OR over NEG bits (highest nonzero trit)
+IS_POS  = OR over POS bits
+IS_ZERO = AND over ZERO bits
 
-#### **The 12 Axioms (The Simplest Letters)**
+4. Constraint Representation
 
-The first 12 letters of the alphabet are considered the foundational "axioms" or the primary axes of the 12D space. Each of these letters corresponds to a single "ON" bit.
+Each variable X over domain D ⊆ {−1,0,+1}¹² is represented as ternary bitmasks:
+NEG_X[i] = 1 iff trit i cannot be +1 or 0
+ZERO_X[i] = 1 iff trit i cannot be −1 or +1
+POS_X[i] = 1 iff trit i cannot be −1 or 0
 
-*   **Example:** Aleph (א) might be `000000000001` (value 1), Bet (ב) would be `000000000010` (value 2), Gimel (ג) would be `000000000100` (value 4), and so on, with each letter representing the next power of 2.
-*   **Mathematical Concept (Hamming Weight):** The "Hamming Weight" is simply the number of "ON" bits (1s) in a binary number. All 12 of these axiom letters have a Hamming Weight of **k=1**.
+Constraint solving acts by eliminating inconsistent masks.
 
-#### **The 10 Compounds (The More Complex Letters)**
+5. Constraint Propagation
 
-The next 10 letters are "compounds," meaning they are formed by combining two of the original axioms. Their structural vector is the result of turning on the two bits corresponding to the two axioms they are built from.
+5.1 Equality Constraint X = Y
+NEG_X  &= NEG_Y
+ZERO_X &= ZERO_Y
+POS_X  &= POS_Y
+Apply symmetry for Y.
 
-*   **Example:** A compound letter might have the vector `000000000011` (value 3). This combines the vectors for Aleph (1) and Bet (2).
-*   **Mathematical Concept (Hamming Weight):** Because these letters are combinations of two axioms, they all have a Hamming Weight of **k=2**.
+5.2 Inequality Constraint X ≠ Y
+For each trit i:
+Kill any position where NEG_X[i] & NEG_Y[i], etc.
+If all three masks match → generate contradiction bit.
 
----
+5.3 Relational Constraint X = Y + k
+Let shift k be applied to the ternary masks of Y using bitwise shifts:
+NEG_X  = SHL(NEG_Y, k)
+ZERO_X = SHL(ZERO_Y, k)
+POS_X  = SHL(POS_Y, k)
+Apply boundary mask truncation to maintain 12 positions.
 
-### **Section 3: Analysis and Relationships**
+5.4 General Numeric Constraints f(X,Y,Z,...) = 0
+Expand f using ternary arithmetic rules (Section 3) and update masks by ruling out inconsistent trit combinations:
+For each trit index i:
+For all combinations of operand trits (using masks):
+Evaluate ternary output via bitwise operators.
+Invalidate any operand mask bits that cannot produce a valid output.
 
-#### **Ternary Folding (Simplifying 12D to 3D)**
+6. State Machine and Control Flow
 
-To make the 12-dimensional space easier to understand, it is "folded" into a 3D system. The 12 dimensions (bits) are grouped into three sets of four, associated with the three Hebrew "Mother Letters":
+All control-flow constructs are encoded as ternary state registers:
+STATE = {NEG_s, ZERO_s, POS_s} per state index.
 
-1.  **X-Axis (א - Aleph):** Represents "Potential" (Bits 1-4).
-2.  **Y-Axis (מ - Mem):** Represents "Formation" (Bits 5-8).
-3.  **Z-Axis (ש - Shin):** Represents "Transformation" (Bits 9-12).
+Transitions:
+STATE_next[j] = OR over all allowed predecessor states i:
+    (STATE[i] & TRANSITION_MASK[i→j])
 
-This allows any state (number from 0-4095) to be visualized as having a value on each of these three axes.
+All operations use only:
+AND, OR, XOR, NOT, SHL, SHR
 
-#### **Hamming Distance (Measuring Relationships)**
+No branching is required; the state evolution is purely mask-driven.
 
-The model defines the relationship or "distance" between any two letters using a concept called Hamming Distance.
+7. Memory Model
 
-*   **Formula:** `H(l₁, l₂) = Hamming Weight(V(l₁) XOR V(l₂))`
-*   **Math Explained:** This measures how different two binary numbers are.
-    1.  You take the vectors (the 12-bit numbers) for two different letters.
-    2.  You perform an XOR operation on them. The result of the XOR will have a '1' in every position where the original two numbers had different bits, and a '0' where they were the same.
-    3.  You then calculate the Hamming Weight (count the '1's) of that result.
-    *   **In short:** The Hamming Distance is the number of bit-flips required to turn one letter's vector into the other's. It is the literal geometric distance between their points on the hypercube.
+A memory cell is a 12-trit word represented as:
+{NEG[0..11], ZERO[0..11], POS[0..11]}
 
----
+Addressing is expressed as constraints over ternary address registers. Memory reads/writes are implemented via masked selection:
+READ = OR over all cells c:
+    (CELLc_masks & ADDRESS_MATCH_MASKc)
 
-### **The Voxel State Analyzer (The Interactive Tool)**
+Writes:
+CELLc_masks = (CELLc_masks & ~ADDRESS_MATCH_MASKc) | (NEWVAL & ADDRESS_MATCH_MASKc)
 
-The second half of the document describes a visual tool to explore these concepts. It allows a user to pick any number from 0 to 4095 and see:
+All performed using bitwise operations.
 
-*   **Binary Vector:** The 12-bit binary representation of the number.
-*   **Symmetry Complement:** The number's exact opposite (4095 minus the number).
-*   **Hamming Weight:** How many bits are "ON" (set to 1).
-*   **Letter Match:** If the number perfectly matches the vector of one of the 22 Hebrew letters, it shows which one.
-*   **Contained Axioms:** It shows which of the 12 fundamental "Axiom" letters are part of the current number.
-*   **Ternary Bars:** It visualizes the number's value on each of the three folded axes (Potential, Formation, Transformation).
+8. Universal ALU
+
+Define the ALU output as function F of inputs A,B,… where F is described as a ternary expression. Replace every ternary operator in F with its bitwise mask expansion using Sections 3 and 4.
+
+Thus the ALU is a collection of mask transformers:
+OUT_NEG[i], OUT_ZERO[i], OUT_POS[i] =
+    BOOLEAN_EXPR(NEG_A[i], ZERO_A[i], POS_A[i], ...)
+
+9. Solver Execution Model
+
+1. Initialize domain masks for all variables.
+2. Repeatedly apply constraint propagation rules (Sections 5–6).
+3. If any mask triple becomes (0,0,0), contradiction.
+4. If all mask triples resolve to one-hot (NEG or ZERO or POS), assignment found.
+5. If unresolved, choose a mask bit to branch on (optional) or continue propagation until fixed point.
+
+10. Hardware Independence
+
+All steps rely solely on:
+AND, OR, XOR, NOT, SHL, SHR
+
+Thus TBCE executes efficiently on:
+CPUs, GPUs, vector/SIMD units, FPGAs, microcontrollers.
+
+11. Summary
+
+A complete ALU, control flow, register file, and constraint solver can be encoded entirely using bitwise operations and shifts applied to balanced-ternary encoded masks across 12-trit words. This yields a fast, portable, architecture-independent system capable of solving constraints with highly parallel bitwise propagation.
